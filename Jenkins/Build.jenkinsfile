@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+
+    environment {
+        image_registry = 'localhost:5050'
+        image_name = "ila-final-project"
+        repo_url = 'git@github.com:vicz/ila-final-project.git'
+    }
+
+    parameters {
+        string(name: 'image_tag')
+        string(name: 'repo_branch', defaultValue: 'main')
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                script {
+                    def scmVars = checkout scm: [
+                        $class: 'GitSCM', 
+                        userRemoteConfigs: [[
+                          url: "${env.repo_url}", 
+                           credentialsId: 'jenkins-github-ssh'
+                        ]], 
+                        branches: [[name: "${env.repo_branch}"]]
+                    ], poll: false
+
+                    sh """
+                    set -e
+                    docker build --progress=plain -f Dockerfile -t "${env.image_name}:latest" .
+
+                    docker tag "${env.image_name}:latest" "${env.image_registry}/${env.image_name}:latest"
+                    # docker push "${env.image_registry}/${env.image_name}:latest"
+
+                    if [ "${env.image_tag}" ]; then
+                        docker tag ${env.image_name}:latest "${env.image_registry}/${env.image_name}:${env.image_tag}"
+                        # docker push "${env.image_registry}/${env.image_name}:${env.image_tag}"
+                    fi
+                    """
+                }
+            }
+        }
+    }
+
+    // post{
+    //     always{
+    //         cleanWs()
+    //     }
+    // }
+}

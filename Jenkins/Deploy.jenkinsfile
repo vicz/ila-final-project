@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+  
+    environment {
+        image_registry = 'localhost:5050'
+        image_name = "ila-final-project"
+        repo_url = 'git@github.com:vicz/ila-final-project.git'
+        repo_branch = 'main'
+    }
+    
+    parameters {
+        string(name: 'image_tag', defaultValue: 'latest')
+    }
+
+  
+    stages {
+        stage('Build') {
+            steps {
+                script {
+                    def scmVars = checkout scm: [
+                        $class: 'GitSCM', 
+                        userRemoteConfigs: [[
+                          url: "${env.repo_url}", 
+                           credentialsId: 'jenkins-github-ssh'
+                        ]], 
+                        branches: [[name: "${env.repo_branch}"]]
+                    ], poll: false
+
+                    withCredentials([file(credentialsId: 'kubeconf-local', variable: 'kubeconfig')]) {
+                        // Doing Helm on budget.
+                        sh """
+                        set -e
+    
+                        sed -i.orig 's!image:.*!image: ${env.image_registry}/${env.image_name}:${env.image_tag}!' k8s/deployment.yaml
+                        
+                        kubectl --kubeconfig ${kubeconfig} apply -f k8s/
+                        """
+                    }
+                }
+            }
+        }
+    } 
+
+    post{
+        always{
+            cleanWs()
+        }
+    }
+}
