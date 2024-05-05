@@ -10,6 +10,7 @@ pipeline {
     parameters {
         string(name: 'image_tag')
         string(name: 'repo_branch', defaultValue: 'main')
+        booleanParam(name: 'run_deploy', defaultValue: true, description: 'Deploy after build')
     }
 
     stages {
@@ -40,11 +41,27 @@ pipeline {
                 }
             }
         }
+        stage('trigger deploy') {
+            when { expression {params.run_deploy} }
+            steps {
+                script {
+                    build(
+                        wait: false, 
+                        job: 'Deploy', 
+                        waitForStart: true, 
+                        parameters: [ 
+                            string(name: 'image_tag', value: env.image_tag),
+                            string(name: 'repo_branch', value: env.repo_branch) 
+                        ]
+                    )
+                }
+            }
+        }
     }
 
-    // post{
-    //     always{
-    //         cleanWs()
-    //     }
-    // }
+    post{
+        always{
+            cleanWs()
+        }
+    }
 }
