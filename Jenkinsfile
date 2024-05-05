@@ -1,9 +1,3 @@
-// library identifier: 'pipelines_library@main', retriever: modernSCM([
-//     $class: 'GitSCMSource',
-//     credentialsId: 'jenkins-bitbucket', 
-//     remote: 'https://bitbucket.oak.in.ua/scm/infdel/pipelines_library.git'
-// ])
-
 pipeline {
     agent any
 
